@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Authority Trail Checker</title>
+<style>
+  :root { --bg:#f6f4ef; --ink:#1d2330; --muted:#5b6475; --card:#fffdf8; --line:#d9d3c4; --ok:#1b6b3a; --bad:#a3231a; --warn:#8a5a00; --accent:#23406e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14171d; --ink:#e8e6df; --muted:#9aa3b2; --card:#1b1f27; --line:#323847; --ok:#6fcf97; --bad:#ff8a80; --warn:#f2c066; --accent:#8ab4f8; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 Georgia, "Times New Roman", serif; }
+  main { max-width:880px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:1.6rem; margin:0 0 4px; }
+  p.lead { color:var(--muted); margin:0 0 20px; }
+  .drop { border:2px dashed var(--line); background:var(--card); border-radius:10px; padding:28px; text-align:center; }
+  .drop.over { border-color:var(--accent); }
+  button, .btn { font:inherit; background:var(--accent); color:var(--bg); border:0; border-radius:6px; padding:8px 14px; cursor:pointer; }
+  button.alt { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:16px; }
+  .status { font-size:1.25rem; font-weight:bold; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
+  table { width:100%; border-collapse:collapse; font:14px/1.4 ui-monospace, Consolas, monospace; }
+  th, td { text-align:left; padding:5px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .small { color:var(--muted); font-size:.9rem; }
+  code { font:13px ui-monospace, Consolas, monospace; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Authority Trail Checker</h1>
+  <p class="lead">Drop a log bundle (JSON) here. Everything is checked in your browser; nothing is uploaded.
+  This page checks the hash chain and the signatures only. It does not apply the authority rules (limits, expiry, revocation, sub-delegation) or check anchors; the command-line verifier does.</p>
+
+  <div id="drop" class="drop">
+    <p>Drop <code>trail.json</code> here, or</p>
+    <input id="file" type="file" accept=".json,application/json">
+    <p class="small">No file at hand? <button class="alt" id="sample" type="button">Load a built-in tiny sample</button></p>
+  </div>
+
+  <div id="out"></div>
+</main>
+<script>
+"use strict";
+const enc = new TextEncoder();
+const hex = u8 => Array.from(u8, b => b.toString(16).padStart(2, "0")).join("");
+const unhex = s => { if (!/^([0-9a-f]{2})*$/.test(s)) throw new Error("bad hex"); return Uint8Array.from(s.match(/../g) || [], h => parseInt(h, 16)); };
+const cmpCodePoints = (a, b) => { const A = Array.from(a), B = Array.from(b); for (let i = 0; i < Math.min(A.length, B.length); i++) { const d = A[i].codePointAt(0) - B[i].codePointAt(0); if (d) return d; } return A.length - B.length; };
+
+// Canonical JSON: sorted keys (by code point), no spaces, integers only. Same bytes as the Python implementation.
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+function canonical(v) {
+  if (v === null) return "null";
+  if (typeof v === "boolean") return v ? "true" : "false";
+  if (typeof v === "number") { if (!Number.isSafeInteger(v)) throw new Error("non-integer or unsafe number"); return String(v); }
+  if (typeof v === "string") { if (LONE_SURROGATE.test(v)) throw new Error("lone surrogate in string"); return JSON.stringify(v); }
+  if (Array.isArray(v)) return "[" + v.map(canonical).join(",") + "]";
+  if (typeof v === "object") return "{" + Object.keys(v).sort(cmpCodePoints).map(k => JSON.stringify(k) + ":" + canonical(v[k])).join(",") + "}";
+  throw new Error("unsupported type");
+}
+async function sha256Hex(bytes) { return hex(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))); }
+async function entryHash(e) { const c = Object.assign({}, e); delete c.hash; return sha256Hex(enc.encode(canonical(c))); }
+const DOMAIN = "authority-trail/1\n";
+// The eight small-order Ed25519 points. A key with one of these encodings is refused (the Python verifier refuses them too).
+// A key is refused if its y coordinate is not canonical (y >= p) or equals the y of a small-order point, whatever its
+// sign bit; that covers non-canonical encodings of the same points as well as the canonical ones.
+const P25519 = (1n << 255n) - 19n;
+const leBig = hexStr => BigInt("0x" + (hexStr.match(/../g) || []).reverse().join(""));
+const SMALL_Y = new Set(["0000000000000000000000000000000000000000000000000000000000000000",
+  "0100000000000000000000000000000000000000000000000000000000000000",
+  "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+  "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+  "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"].map(leBig));
+function weakKey(pubHex) {
+  const y = leBig(pubHex) & ((1n << 255n) - 1n);   // drop the sign bit
+  return y >= P25519 || SMALL_Y.has(y);
+}
+// JSON numbers that are not plain integers (1.0, 1e3) are refused: the Python verifier refuses them too.
+function hasNonIntegerNumber(text) {
+  const noStrings = text.replace(/"(?:[^"\\]|\\.)*"/g, '""');
+  return /-?\d+(\.\d+|[eE][+-]?\d+)/.test(noStrings);
+}
+async function sigOk(env, pubHex) {
+  try {
+    if (!/^[0-9a-f]{64}$/.test(pubHex) || weakKey(pubHex) || !/^[0-9a-f]{128}$/.test(env.sig)) return false;
+    const pub = unhex(pubHex);
+    if ((await sha256Hex(pub)).slice(0, 32) !== env.signer) return false;
+    const key = await crypto.subtle.importKey("raw", pub, { name: "Ed25519" }, false, ["verify"]);
+    const msg = enc.encode(DOMAIN + canonical({ kind: env.kind, body: env.body, signer: env.signer }));
+    return await crypto.subtle.verify({ name: "Ed25519" }, key, unhex(env.sig), msg);
+  } catch (e) { return false; }
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function check(bundle) {
+  const res = { problems: [], rows: [], first: null };
+  if (!bundle || bundle.format !== "authority-trail/1" || !Array.isArray(bundle.entries)) { res.problems.push({ seq: null, msg: "not an authority-trail/1 bundle" }); return res; }
+  const GEN = "0".repeat(64);
+  let prev = GEN;
+  const grants = {};
+  for (let i = 0; i < bundle.entries.length; i++) {
+    const e = bundle.entries[i], row = { seq: i, kind: "?", id: "", chain: "ok", sig: "", gate: "" };
+    try {
+      row.kind = e.envelope.kind; row.id = e.envelope.body.id || ""; row.gate = e.gate ? e.gate.decision : "";
+      if (e.seq !== i) { row.chain = "seq mismatch"; }
+      else if (e.prev !== prev) { row.chain = "prev hash mismatch"; }
+      else if (await entryHash(e) !== e.hash) { row.chain = "content does not match its hash"; }
+      // signatures: grants by grantor key; actions by the grant's grantee key; revocations by a grantor key up the chain
+      const env = e.envelope, b = env.body;
+      let ok = false;
+      if (env.kind === "grant") {
+        const ref = await sha256Hex(enc.encode(canonical(b)));
+        ok = await sigOk(env, b.grantor.key);
+        if (!(ref in grants)) grants[ref] = b;   // the first record of an exact grant wins, like the Python verifier
+      }
+      else if (env.kind === "action") { const g = grants[b.grant]; ok = !!g && await sigOk(env, g.grantee.key); }
+      else if (env.kind === "revocation") {
+        let ref = b.grant; const seen = new Set();
+        while (ref && grants[ref] && !ok && !seen.has(ref)) { seen.add(ref); ok = await sigOk(env, grants[ref].grantor.key); ref = grants[ref].parent; }
+      }
+      row.sig = ok ? "valid" : "NOT valid";
+    } catch (err) { row.chain = row.chain === "ok" ? "malformed entry" : row.chain; row.sig = "NOT valid"; }
+    if (row.chain !== "ok" && res.first === null) res.first = i;
+    if (row.chain !== "ok") res.problems.push({ seq: i, msg: row.chain });
+    prev = (e && e.hash) || "";
+    res.rows.push(row);
+  }
+  return res;
+}
+
+function render(res, bundle, label) {
+  const out = document.getElementById("out");
+  const chainOk = res.problems.length === 0;
+  const badSigs = res.rows.filter(r => r.sig !== "valid");
+  let status, cls;
+  if (!chainOk) { status = "Hash chain BROKEN at entry " + res.first; cls = "bad"; }
+  else if (badSigs.length) { status = "Chain intact, but " + badSigs.length + " signature(s) do not verify"; cls = "warn"; }
+  else { status = "Hash chain intact; all " + res.rows.length + " signatures verify"; cls = "ok"; }
+  let h = '<div class="card"><div class="status ' + cls + '">' + esc(status) + '</div><p class="small">' + esc(label) + '</p>';
+  if (!chainOk) h += "<p>First broken record: <b>entry " + res.first + "</b> (" + esc(res.problems[0].msg) + "). Every entry after it is no longer vouched for by the chain.</p>";
+  h += '<p><button id="tamper" type="button" class="alt">Edit one payment amount in memory and re-check</button> <span class="small">(shows what detection looks like; your file is not changed)</span></p></div>';
+  h += '<div class="card"><table><tr><th>#</th><th>kind</th><th>id</th><th>chain</th><th>signature</th><th>recorder gate</th></tr>';
+  for (const r of res.rows) {
+    const c = r.chain === "ok" ? "" : ' class="bad"', s = r.sig === "valid" ? "" : ' class="bad"';
+    h += "<tr><td>" + r.seq + "</td><td>" + esc(r.kind) + "</td><td>" + esc(r.id) + "</td><td" + c + ">" + esc(r.chain) + "</td><td" + s + ">" + esc(r.sig) + "</td><td>" + esc(r.gate) + "</td></tr>";
+  }
+  h += "</table></div>";
+  h += '<div class="card small">This page does not establish that any grant is legally valid, that a key belongs to a named person, or that the log is complete. It does not re-run the authority rules; use <code>python -m authority_trail memo</code> for that. Without an outside anchor, whoever holds a log could have rebuilt it.</div>';
+  out.innerHTML = h;
+  document.getElementById("tamper").onclick = async () => {
+    const copy = JSON.parse(JSON.stringify(bundle));
+    const hit = copy.entries.find(e => e.envelope.kind === "action" && e.envelope.body.params && Number.isInteger(e.envelope.body.params.amount));
+    if (!hit) { alert("No amount found to edit."); return; }
+    hit.envelope.body.params.amount = Math.max(1, Math.floor(hit.envelope.body.params.amount / 10));
+    render(await check(copy), copy, "EDITED COPY (in memory): one amount in entry " + hit.seq + " was divided by ten");
+  };
+}
+
+async function load(text, label) {
+  let bundle;
+  if (hasNonIntegerNumber(text)) { document.getElementById("out").innerHTML = '<div class="card bad">This file contains a number that is not a plain integer. The format allows integers only (money is in minor units), so it is refused.</div>'; return; }
+  try { bundle = JSON.parse(text); } catch (e) { document.getElementById("out").innerHTML = '<div class="card bad">That file is not valid JSON.</div>'; return; }
+  if (!crypto || !crypto.subtle) { document.getElementById("out").innerHTML = '<div class="card bad">This browser has no Web Crypto. Use the command-line verifier.</div>'; return; }
+  try { await crypto.subtle.importKey("raw", new Uint8Array(32), { name: "Ed25519" }, false, ["verify"]); }
+  catch (e) { if (e.name === "NotSupportedError") { document.getElementById("out").innerHTML = '<div class="card bad">This browser does not support Ed25519 in Web Crypto (needs a recent Chrome, Edge, Firefox or Safari). Use the command-line verifier.</div>'; return; } }
+  render(await check(bundle), bundle, label);
+}
+const drop = document.getElementById("drop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", async e => { e.preventDefault(); drop.classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) load(await f.text(), f.name); });
+document.getElementById("file").addEventListener("change", async e => { const f = e.target.files[0]; if (f) load(await f.text(), f.name); });
+document.getElementById("sample").addEventListener("click", () => load(JSON.stringify(window.SAMPLE || {}), "built-in sample"));
+</script>
+<script id="sample-data">window.SAMPLE = {"format":"authority-trail/1","entries":[{"seq":0,"prev":"0000000000000000000000000000000000000000000000000000000000000000","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"grant","body":{"id":"G-1","grantor":{"name":"Northgate Holdings (fictional)","key":"8419566038bb6ba4ef05e3da577d5559761751e427c58001277aa594e912c704"},"grantee":{"name":"LegalOps Agent","key":"ab98a8b204bddf8a50267d9c246b4d61ce86c4137006ace30266dce99760ee86"},"parent":null,"instrument":{"title":"Delegation to LegalOps Agent","text":"Northgate Holdings (a fictional company) authorises its LegalOps Agent, for one week, to do three things on its behalf and nothing else. (1) Pay invoices from the outside counsel and filing firm named here, up to USD 5,000.00 per invoice and USD 12,000.00 in total. (2) Approve transfers of FUND-A units to the two listed investors named here, up to 1,000 units per transfer and 2,500 units in total. (3) Send routine notices, up to 10. The agent may hand part of this authority to one more agent, never more than it holds itself. Northgate may withdraw this authority at any time by signing a revocation.","text_sha256":"70200823f21d171f711fc1d75b77548c34f27e72a438a170fa072fc031ed1c4a"},"purpose":"Routine legal operations and fund administration for one week","not_before":"2026-10-27T13:46:49Z","expires_at":"2026-11-03T13:47:49Z","permissions":[{"action":"pay_invoice","max_amount":500000,"currency":"USD","counterparties":["Harbor & Lane LLP","Meridian Filing Services"],"max_total":1200000},{"action":"approve_transfer","max_amount":1000,"currency":"FUND-A","counterparties":["Investor A","Investor B"],"max_total":2500},{"action":"send_notice","max_uses":10}],"delegation":{"allowed":true,"max_depth":1}},"signer":"cd1f8a4734e76448d76bf06063d18d6b","sig":"fa19f40968e6428a2d2dece306b57750f0c562f1de7a5407295ce0fd003ac6e55ff9c017aad71a04dcf761b2163acf75c8befe82a3efb7f047cb7a859ebe2202"},"gate":{"decision":"ALLOWED","reasons":[]},"hash":"e93849d859fbf8db8164c4bf0046dd9a38c7899f6e4a3e902fec1486cf5df7af"},{"seq":1,"prev":"e93849d859fbf8db8164c4bf0046dd9a38c7899f6e4a3e902fec1486cf5df7af","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"action","body":{"id":"A-01","grant":"be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8","action":"pay_invoice","params":{"amount":120000,"currency":"USD","counterparty":"Harbor & Lane LLP","reference":"INV-1042"},"claimed_at":"2026-10-27T13:47:49Z"},"signer":"96bda450519e9ff9d5f5daf02c74dee0","sig":"ca9de0ac220055eab78b13d2394d07857afa78abbc8a61f575444b965d00becff6e26bb0dbdde09bb0fd5458c0fd73667e44a61fbbd98747401a784ceccf4306"},"gate":{"decision":"ALLOWED","reasons":[]},"hash":"2718022cbce520449b4e2b7a51f768e663d4dd559589dc6ce3851dbcffd16208"},{"seq":2,"prev":"2718022cbce520449b4e2b7a51f768e663d4dd559589dc6ce3851dbcffd16208","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"action","body":{"id":"A-02","grant":"be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8","action":"approve_transfer","params":{"amount":800,"currency":"FUND-A","counterparty":"Investor A"},"claimed_at":"2026-10-27T13:47:49Z"},"signer":"96bda450519e9ff9d5f5daf02c74dee0","sig":"fcb3ca629e8f7e7ec2745e4d396e38ccfe084a1b3aa391b2266378b6a76b915917d83be62e496817755bf29c6ca519ff454caf5cb8fef38989f689a7baa14005"},"gate":{"decision":"ALLOWED","reasons":[]},"hash":"712fce15bd8d0917ed68dc11106c1c337f3b8baaca661f75c79a001165add3d3"},{"seq":3,"prev":"712fce15bd8d0917ed68dc11106c1c337f3b8baaca661f75c79a001165add3d3","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"grant","body":{"id":"G-2","grantor":{"name":"LegalOps Agent","key":"ab98a8b204bddf8a50267d9c246b4d61ce86c4137006ace30266dce99760ee86"},"grantee":{"name":"Filing Agent","key":"981096b2983e39d4303a50d4e41d35e7f04ac2f95b16e0d7214e0f1fcd6574f4"},"parent":"be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8","instrument":{"title":"Sub-delegation to Filing Agent","text":"The LegalOps Agent passes to the Filing Agent only the right to send routine notices, at most 3, within the same week.","text_sha256":"433ad6263637ed30d8053ce4daced25ace7e24a77c8bdae81047facffc84b59d"},"purpose":"Send routine notices only","not_before":"2026-10-27T13:47:49Z","expires_at":"2026-10-30T13:47:49Z","permissions":[{"action":"send_notice","max_uses":3}],"delegation":{"allowed":false,"max_depth":0}},"signer":"96bda450519e9ff9d5f5daf02c74dee0","sig":"43ddf385f23488b93f10d5e7a77d84cb9726e7d69e500d99375d5b9dc75091cb61b801ba791e74e55cd255dc7936037a13125957aa1c083e0452fad6a7ea7c02"},"gate":{"decision":"ALLOWED","reasons":[]},"hash":"d75b21c6894e138bec88f91b704ed2dd38a3afb74bcc783df4831a5f1358c209"},{"seq":4,"prev":"d75b21c6894e138bec88f91b704ed2dd38a3afb74bcc783df4831a5f1358c209","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"action","body":{"id":"A-03","grant":"1e7dc2bcbbc1d09b20adb0b0352d85a79946f96ca2503bf9ceace27adac20bac","action":"send_notice","params":{"notice":"Annual filing reminder"},"claimed_at":"2026-10-27T13:47:49Z"},"signer":"0cd453cd7781ef06c9d1036d4e2f2d81","sig":"88629fe6b00ce7c2797b819a6bc412ab12c4cc605698bb61f7c4b9f4013007ce10c37f3b162e63b73d840402b1822ea16de0c2cfcd61e0f921933e8e6a61b50a"},"gate":{"decision":"ALLOWED","reasons":[]},"hash":"585b045f7510d49a4bb4c54f6cb750a9c68aa70129ead2f43e11aea1cf5f2e43"},{"seq":5,"prev":"585b045f7510d49a4bb4c54f6cb750a9c68aa70129ead2f43e11aea1cf5f2e43","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"action","body":{"id":"A-04","grant":"be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8","action":"pay_invoice","params":{"amount":900000,"currency":"USD","counterparty":"Harbor & Lane LLP"},"claimed_at":"2026-10-27T13:47:49Z"},"signer":"96bda450519e9ff9d5f5daf02c74dee0","sig":"256a52a256268f64c3e653726e3cc9c8e884a2903b799563788f96bd78917b224de9f775d0fa727dce1a89e2989f3cf43ac974e7faa3f4ba5f25b5e93582570a"},"gate":{"decision":"BLOCKED","reasons":["AMOUNT_OVER_LIMIT: G-1 [be9197ca]: 900000 > 500000"]},"hash":"c2f0adefab07307e93889038822e8dcdd203c00f5201120876d26ef24fc3c177"},{"seq":6,"prev":"c2f0adefab07307e93889038822e8dcdd203c00f5201120876d26ef24fc3c177","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"action","body":{"id":"A-05","grant":"be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8","action":"approve_transfer","params":{"amount":500,"currency":"FUND-A","counterparty":"Unlisted Fund LP"},"claimed_at":"2026-10-27T13:47:49Z"},"signer":"96bda450519e9ff9d5f5daf02c74dee0","sig":"a1b1b2087314d9f6f45d9df98f3a4c413512f23a546b72aaba429a52caa14e6b2dfb11b5c5e4e413f5e1a3eeb84dddee09ebeab192d036a3f476803df86e5d08"},"gate":{"decision":"BLOCKED","reasons":["COUNTERPARTY_NOT_ALLOWED: G-1 [be9197ca]: 'Unlisted Fund LP'"]},"hash":"de402297b477319792667a0dd02fb9ab86c15aa04af15a6499131a07b20c166b"},{"seq":7,"prev":"de402297b477319792667a0dd02fb9ab86c15aa04af15a6499131a07b20c166b","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"action","body":{"id":"A-06","grant":"1e7dc2bcbbc1d09b20adb0b0352d85a79946f96ca2503bf9ceace27adac20bac","action":"pay_invoice","params":{"amount":1000,"currency":"USD","counterparty":"Harbor & Lane LLP"},"claimed_at":"2026-10-27T13:47:49Z"},"signer":"0cd453cd7781ef06c9d1036d4e2f2d81","sig":"6355923c989ceedde206f5893fa3e46b2da700802698cbf8fd8d152e07c3f810d71a76a29f866f0b5b3f45a831eba03bcddc3dd37d12f126ec87dd877f23a50f"},"gate":{"decision":"BLOCKED","reasons":["ACTION_NOT_PERMITTED: G-2 [1e7dc2bc]: 'pay_invoice'"]},"hash":"6347a320650f79069fa0c29d7f3203d429445527c9b1ef5dc08f1cbd9de56131"},{"seq":8,"prev":"6347a320650f79069fa0c29d7f3203d429445527c9b1ef5dc08f1cbd9de56131","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"action","body":{"id":"A-07","grant":"be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8","action":"pay_invoice","params":{"amount":450000,"currency":"USD","counterparty":"Meridian Filing Services"},"claimed_at":"2026-10-27T13:47:49Z"},"signer":"96bda450519e9ff9d5f5daf02c74dee0","sig":"20fe4b36ad27301d5bb3be5ccdd58bd044063f2d55ff38d0203e46747d5a1dc8abe172a63cb58f9e77dd28dbf68180941fc1b9d0ce91e0a15df730315544fd0d"},"gate":{"decision":"ALLOWED","reasons":[]},"hash":"3093efaa7ccfaa56e682f8be175d7bcecd2317a4699c22a16c8b90049ad1f51b"},{"seq":9,"prev":"3093efaa7ccfaa56e682f8be175d7bcecd2317a4699c22a16c8b90049ad1f51b","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"action","body":{"id":"A-08","grant":"be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8","action":"pay_invoice","params":{"amount":450000,"currency":"USD","counterparty":"Meridian Filing Services"},"claimed_at":"2026-10-27T13:47:49Z"},"signer":"96bda450519e9ff9d5f5daf02c74dee0","sig":"54a0e5b934cf44002a5650a70b6ef07b4cc653d75f798a567f1f20fe557209b91b45109b98cec189f50f30c2d60e6de60baa7688bb523f73d1bfe59c655dd80f"},"gate":{"decision":"ALLOWED","reasons":[]},"hash":"7eb902761666ee74e79438942ae2583b5d9e65cced0a17e3dd968beda9558765"},{"seq":10,"prev":"7eb902761666ee74e79438942ae2583b5d9e65cced0a17e3dd968beda9558765","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"action","body":{"id":"A-09","grant":"be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8","action":"pay_invoice","params":{"amount":300000,"currency":"USD","counterparty":"Harbor & Lane LLP"},"claimed_at":"2026-10-27T13:47:49Z"},"signer":"96bda450519e9ff9d5f5daf02c74dee0","sig":"e6db8a3fb321b3ff01d1db01e96aa1da1d54d1b1921235700811d62c58e439da6b2550c175cfc8c7883b6ecb97a24f1b046c78e9d5c3114a7bca5f5a0d3e0d0a"},"gate":{"decision":"BLOCKED","reasons":["CUMULATIVE_LIMIT_EXCEEDED: G-1 [be9197ca]: 1020000 + 300000 > 1200000"]},"hash":"350cf7636937ce0778c31438de511c5d8a4af587b274e988a3b92766e153225a"},{"seq":11,"prev":"350cf7636937ce0778c31438de511c5d8a4af587b274e988a3b92766e153225a","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"revocation","body":{"id":"R-1","grant":"be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8","reason":"Engagement paused pending board review","claimed_at":"2026-10-27T13:47:49Z"},"signer":"cd1f8a4734e76448d76bf06063d18d6b","sig":"4cdfb495233433fe8e0953a1ff0b753f55ca0e47826d3f06a243ad176e5bff70d794a040a14e2001b43f7b0e52ed729f0f97079df746a7fce6d93a0cb940d40f"},"gate":{"decision":"ALLOWED","reasons":[]},"hash":"42511a7a999993c30270fb22d56fea46ceda4201ffa685c7798818ed7e07c065"},{"seq":12,"prev":"42511a7a999993c30270fb22d56fea46ceda4201ffa685c7798818ed7e07c065","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"action","body":{"id":"A-10","grant":"be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8","action":"pay_invoice","params":{"amount":50000,"currency":"USD","counterparty":"Harbor & Lane LLP"},"claimed_at":"2026-10-27T13:47:49Z"},"signer":"96bda450519e9ff9d5f5daf02c74dee0","sig":"f399a430c5982736ef685324443f881deae1b9fc6e6fcbf62e16530848bb9f524e3fdcd691fadd857d2d84c7683ba0725ab6daebdc6abb3f700e6f69226ec800"},"gate":{"decision":"BLOCKED","reasons":["GRANT_REVOKED: G-1 [be9197ca] (revocation R-1 at log position 11)"]},"hash":"b2b389dc5342980739a7f89d0596a37503782ab8f860ae39b655b357ee29a833"},{"seq":13,"prev":"b2b389dc5342980739a7f89d0596a37503782ab8f860ae39b655b357ee29a833","recorded_at":"2026-10-27T13:47:49Z","envelope":{"kind":"action","body":{"id":"A-11","grant":"1e7dc2bcbbc1d09b20adb0b0352d85a79946f96ca2503bf9ceace27adac20bac","action":"send_notice","params":{"notice":"Second reminder"},"claimed_at":"2026-10-27T13:47:49Z"},"signer":"0cd453cd7781ef06c9d1036d4e2f2d81","sig":"8bd5051e5bd32ad7867c44dcf15bd7e9c7ad2a86ae97709cdd421db7339ce0da40a980c0ab19045ec158d061deafb97fb68c596a78c609c2ef59aa683446d70b"},"gate":{"decision":"BLOCKED","reasons":["GRANT_REVOKED: G-1 [be9197ca] (revocation R-1 at log position 11)"]},"hash":"1f0fcf3f6ae334e31ff4f8b8a7cb9b63dac16db253af7e43ed78f5966189a045"}],"anchors":[{"method":"opentimestamps","seq":13,"head_hash":"1f0fcf3f6ae334e31ff4f8b8a7cb9b63dac16db253af7e43ed78f5966189a045","ots_b64":"AE9wZW5UaW1lc3RhbXBzAABQcm9vZgC/ieLohOiSlAEIdmLwCmqnOkxUAEEN7gwVCAXXcWE5FIqM3kVg4ch4Z57wEICXcESKF0NW+pGu+Lgso8gI//AIkiKeTwyPvAkI8SDYkTKQFOFbVcvy7gXfyRKvFYGfiwrELjBgGuoZjgMahQjwEMybQwfRElzLaGsmvJfPOC4I8SDNnkbp3hoWyqpfVSFKmTRiEkKNcVD2EDTWC1F1pFI+owjxBGrgq4jwCMbuIPMBU7GsAIPf4w0u+QyOLi1odHRwczovL2FsaWNlLmJ0Yy5jYWxlbmRhci5vcGVudGltZXN0YW1wcy5vcmfwCIglv25vvxdPCPEgxLzfs4T/xIFJN2xIHh5K+7JXDciW55mkVnBUh2vvGDQI8BDt82sdhxTRxj1BuPsAghrNCPAgpZUkj8WQNuHZhlQlJOETUaNiuDOeE3NaEHY5kGiEa0YI8SBlOnRHT8hAptykgrP/7hqQYAf7oITizCHYdCkhu+oK5gjwINJ0ur92qxEkadVoQdLd8Ylm+ksEj//S3qZHw4G4fpLHCPEEauCrivAInkAoxJjdfiYAg9/jDS75DI4sK2h0dHBzOi8vYm9iLmJ0Yy5jYWxlbmRhci5vcGVudGltZXN0YW1wcy5vcmc="}]};</script>
+</body>
+</html>

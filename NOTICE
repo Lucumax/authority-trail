@@ -1,0 +1,15 @@
+Authority Trail
+Copyright (c) 2026 Walter Guevara, MIT licence (see LICENSE).
+
+Third-party material
+
+authority_trail/ed25519.py is adapted from the Python reference implementation printed in
+RFC 8032 (Edwards-Curve Digital Signature Algorithm), section 6. Code components extracted
+from IETF RFCs are provided under the Revised BSD licence, per the IETF Trust Legal
+Provisions in effect for that RFC. The RFC authors are S. Josefsson and I. Liusvaara.
+This copy was re-typed and modified (public-key admission checks, input handling); it is not
+the unmodified RFC text.
+
+The Ed25519 test vectors in tests/test_crypto.py are the public vectors from RFC 8032 section 7.1.
+
+web/verify.html uses the browser's Web Crypto API and has no third-party code.

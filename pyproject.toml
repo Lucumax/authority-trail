@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "authority-trail"
+version = "0.1.0"
+description = "Verifiable records of delegated authority for AI agent actions"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+fast-signing = ["cryptography>=42"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+authority-trail = "authority_trail.cli:main"
+
+[tool.setuptools]
+packages = ["authority_trail"]

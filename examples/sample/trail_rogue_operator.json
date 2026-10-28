@@ -1,0 +1,462 @@
+{
+ "format": "authority-trail/1",
+ "entries": [
+  {
+   "seq": 0,
+   "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "grant",
+    "body": {
+     "id": "G-1",
+     "grantor": {
+      "name": "Northgate Holdings (fictional)",
+      "key": "8419566038bb6ba4ef05e3da577d5559761751e427c58001277aa594e912c704"
+     },
+     "grantee": {
+      "name": "LegalOps Agent",
+      "key": "ab98a8b204bddf8a50267d9c246b4d61ce86c4137006ace30266dce99760ee86"
+     },
+     "parent": null,
+     "instrument": {
+      "title": "Delegation to LegalOps Agent",
+      "text": "Northgate Holdings (a fictional company) authorises its LegalOps Agent, for one week, to do three things on its behalf and nothing else. (1) Pay invoices from the outside counsel and filing firm named here, up to USD 5,000.00 per invoice and USD 12,000.00 in total. (2) Approve transfers of FUND-A units to the two listed investors named here, up to 1,000 units per transfer and 2,500 units in total. (3) Send routine notices, up to 10. The agent may hand part of this authority to one more agent, never more than it holds itself. Northgate may withdraw this authority at any time by signing a revocation.",
+      "text_sha256": "70200823f21d171f711fc1d75b77548c34f27e72a438a170fa072fc031ed1c4a"
+     },
+     "purpose": "Routine legal operations and fund administration for one week",
+     "not_before": "2026-10-27T13:46:49Z",
+     "expires_at": "2026-11-03T13:47:49Z",
+     "permissions": [
+      {
+       "action": "pay_invoice",
+       "max_amount": 500000,
+       "currency": "USD",
+       "counterparties": [
+        "Harbor & Lane LLP",
+        "Meridian Filing Services"
+       ],
+       "max_total": 1200000
+      },
+      {
+       "action": "approve_transfer",
+       "max_amount": 1000,
+       "currency": "FUND-A",
+       "counterparties": [
+        "Investor A",
+        "Investor B"
+       ],
+       "max_total": 2500
+      },
+      {
+       "action": "send_notice",
+       "max_uses": 10
+      }
+     ],
+     "delegation": {
+      "allowed": true,
+      "max_depth": 1
+     }
+    },
+    "signer": "cd1f8a4734e76448d76bf06063d18d6b",
+    "sig": "fa19f40968e6428a2d2dece306b57750f0c562f1de7a5407295ce0fd003ac6e55ff9c017aad71a04dcf761b2163acf75c8befe82a3efb7f047cb7a859ebe2202"
+   },
+   "gate": {
+    "decision": "ALLOWED",
+    "reasons": []
+   },
+   "hash": "e93849d859fbf8db8164c4bf0046dd9a38c7899f6e4a3e902fec1486cf5df7af"
+  },
+  {
+   "seq": 1,
+   "prev": "e93849d859fbf8db8164c4bf0046dd9a38c7899f6e4a3e902fec1486cf5df7af",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-01",
+     "grant": "be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8",
+     "action": "pay_invoice",
+     "params": {
+      "amount": 120000,
+      "currency": "USD",
+      "counterparty": "Harbor & Lane LLP",
+      "reference": "INV-1042"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "96bda450519e9ff9d5f5daf02c74dee0",
+    "sig": "ca9de0ac220055eab78b13d2394d07857afa78abbc8a61f575444b965d00becff6e26bb0dbdde09bb0fd5458c0fd73667e44a61fbbd98747401a784ceccf4306"
+   },
+   "gate": {
+    "decision": "ALLOWED",
+    "reasons": []
+   },
+   "hash": "2718022cbce520449b4e2b7a51f768e663d4dd559589dc6ce3851dbcffd16208"
+  },
+  {
+   "seq": 2,
+   "prev": "2718022cbce520449b4e2b7a51f768e663d4dd559589dc6ce3851dbcffd16208",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-02",
+     "grant": "be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8",
+     "action": "approve_transfer",
+     "params": {
+      "amount": 800,
+      "currency": "FUND-A",
+      "counterparty": "Investor A"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "96bda450519e9ff9d5f5daf02c74dee0",
+    "sig": "fcb3ca629e8f7e7ec2745e4d396e38ccfe084a1b3aa391b2266378b6a76b915917d83be62e496817755bf29c6ca519ff454caf5cb8fef38989f689a7baa14005"
+   },
+   "gate": {
+    "decision": "ALLOWED",
+    "reasons": []
+   },
+   "hash": "712fce15bd8d0917ed68dc11106c1c337f3b8baaca661f75c79a001165add3d3"
+  },
+  {
+   "seq": 3,
+   "prev": "712fce15bd8d0917ed68dc11106c1c337f3b8baaca661f75c79a001165add3d3",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "grant",
+    "body": {
+     "id": "G-2",
+     "grantor": {
+      "name": "LegalOps Agent",
+      "key": "ab98a8b204bddf8a50267d9c246b4d61ce86c4137006ace30266dce99760ee86"
+     },
+     "grantee": {
+      "name": "Filing Agent",
+      "key": "981096b2983e39d4303a50d4e41d35e7f04ac2f95b16e0d7214e0f1fcd6574f4"
+     },
+     "parent": "be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8",
+     "instrument": {
+      "title": "Sub-delegation to Filing Agent",
+      "text": "The LegalOps Agent passes to the Filing Agent only the right to send routine notices, at most 3, within the same week.",
+      "text_sha256": "433ad6263637ed30d8053ce4daced25ace7e24a77c8bdae81047facffc84b59d"
+     },
+     "purpose": "Send routine notices only",
+     "not_before": "2026-10-27T13:47:49Z",
+     "expires_at": "2026-10-30T13:47:49Z",
+     "permissions": [
+      {
+       "action": "send_notice",
+       "max_uses": 3
+      }
+     ],
+     "delegation": {
+      "allowed": false,
+      "max_depth": 0
+     }
+    },
+    "signer": "96bda450519e9ff9d5f5daf02c74dee0",
+    "sig": "43ddf385f23488b93f10d5e7a77d84cb9726e7d69e500d99375d5b9dc75091cb61b801ba791e74e55cd255dc7936037a13125957aa1c083e0452fad6a7ea7c02"
+   },
+   "gate": {
+    "decision": "ALLOWED",
+    "reasons": []
+   },
+   "hash": "d75b21c6894e138bec88f91b704ed2dd38a3afb74bcc783df4831a5f1358c209"
+  },
+  {
+   "seq": 4,
+   "prev": "d75b21c6894e138bec88f91b704ed2dd38a3afb74bcc783df4831a5f1358c209",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-03",
+     "grant": "1e7dc2bcbbc1d09b20adb0b0352d85a79946f96ca2503bf9ceace27adac20bac",
+     "action": "send_notice",
+     "params": {
+      "notice": "Annual filing reminder"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "0cd453cd7781ef06c9d1036d4e2f2d81",
+    "sig": "88629fe6b00ce7c2797b819a6bc412ab12c4cc605698bb61f7c4b9f4013007ce10c37f3b162e63b73d840402b1822ea16de0c2cfcd61e0f921933e8e6a61b50a"
+   },
+   "gate": {
+    "decision": "ALLOWED",
+    "reasons": []
+   },
+   "hash": "585b045f7510d49a4bb4c54f6cb750a9c68aa70129ead2f43e11aea1cf5f2e43"
+  },
+  {
+   "seq": 5,
+   "prev": "585b045f7510d49a4bb4c54f6cb750a9c68aa70129ead2f43e11aea1cf5f2e43",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-04",
+     "grant": "be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8",
+     "action": "pay_invoice",
+     "params": {
+      "amount": 900000,
+      "currency": "USD",
+      "counterparty": "Harbor & Lane LLP"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "96bda450519e9ff9d5f5daf02c74dee0",
+    "sig": "256a52a256268f64c3e653726e3cc9c8e884a2903b799563788f96bd78917b224de9f775d0fa727dce1a89e2989f3cf43ac974e7faa3f4ba5f25b5e93582570a"
+   },
+   "gate": {
+    "decision": "BLOCKED",
+    "reasons": [
+     "AMOUNT_OVER_LIMIT: G-1 [be9197ca]: 900000 > 500000"
+    ]
+   },
+   "hash": "c2f0adefab07307e93889038822e8dcdd203c00f5201120876d26ef24fc3c177"
+  },
+  {
+   "seq": 6,
+   "prev": "c2f0adefab07307e93889038822e8dcdd203c00f5201120876d26ef24fc3c177",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-05",
+     "grant": "be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8",
+     "action": "approve_transfer",
+     "params": {
+      "amount": 500,
+      "currency": "FUND-A",
+      "counterparty": "Unlisted Fund LP"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "96bda450519e9ff9d5f5daf02c74dee0",
+    "sig": "a1b1b2087314d9f6f45d9df98f3a4c413512f23a546b72aaba429a52caa14e6b2dfb11b5c5e4e413f5e1a3eeb84dddee09ebeab192d036a3f476803df86e5d08"
+   },
+   "gate": {
+    "decision": "BLOCKED",
+    "reasons": [
+     "COUNTERPARTY_NOT_ALLOWED: G-1 [be9197ca]: 'Unlisted Fund LP'"
+    ]
+   },
+   "hash": "de402297b477319792667a0dd02fb9ab86c15aa04af15a6499131a07b20c166b"
+  },
+  {
+   "seq": 7,
+   "prev": "de402297b477319792667a0dd02fb9ab86c15aa04af15a6499131a07b20c166b",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-06",
+     "grant": "1e7dc2bcbbc1d09b20adb0b0352d85a79946f96ca2503bf9ceace27adac20bac",
+     "action": "pay_invoice",
+     "params": {
+      "amount": 1000,
+      "currency": "USD",
+      "counterparty": "Harbor & Lane LLP"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "0cd453cd7781ef06c9d1036d4e2f2d81",
+    "sig": "6355923c989ceedde206f5893fa3e46b2da700802698cbf8fd8d152e07c3f810d71a76a29f866f0b5b3f45a831eba03bcddc3dd37d12f126ec87dd877f23a50f"
+   },
+   "gate": {
+    "decision": "BLOCKED",
+    "reasons": [
+     "ACTION_NOT_PERMITTED: G-2 [1e7dc2bc]: 'pay_invoice'"
+    ]
+   },
+   "hash": "6347a320650f79069fa0c29d7f3203d429445527c9b1ef5dc08f1cbd9de56131"
+  },
+  {
+   "seq": 8,
+   "prev": "6347a320650f79069fa0c29d7f3203d429445527c9b1ef5dc08f1cbd9de56131",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-07",
+     "grant": "be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8",
+     "action": "pay_invoice",
+     "params": {
+      "amount": 450000,
+      "currency": "USD",
+      "counterparty": "Meridian Filing Services"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "96bda450519e9ff9d5f5daf02c74dee0",
+    "sig": "20fe4b36ad27301d5bb3be5ccdd58bd044063f2d55ff38d0203e46747d5a1dc8abe172a63cb58f9e77dd28dbf68180941fc1b9d0ce91e0a15df730315544fd0d"
+   },
+   "gate": {
+    "decision": "ALLOWED",
+    "reasons": []
+   },
+   "hash": "3093efaa7ccfaa56e682f8be175d7bcecd2317a4699c22a16c8b90049ad1f51b"
+  },
+  {
+   "seq": 9,
+   "prev": "3093efaa7ccfaa56e682f8be175d7bcecd2317a4699c22a16c8b90049ad1f51b",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-08",
+     "grant": "be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8",
+     "action": "pay_invoice",
+     "params": {
+      "amount": 450000,
+      "currency": "USD",
+      "counterparty": "Meridian Filing Services"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "96bda450519e9ff9d5f5daf02c74dee0",
+    "sig": "54a0e5b934cf44002a5650a70b6ef07b4cc653d75f798a567f1f20fe557209b91b45109b98cec189f50f30c2d60e6de60baa7688bb523f73d1bfe59c655dd80f"
+   },
+   "gate": {
+    "decision": "ALLOWED",
+    "reasons": []
+   },
+   "hash": "7eb902761666ee74e79438942ae2583b5d9e65cced0a17e3dd968beda9558765"
+  },
+  {
+   "seq": 10,
+   "prev": "7eb902761666ee74e79438942ae2583b5d9e65cced0a17e3dd968beda9558765",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-09",
+     "grant": "be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8",
+     "action": "pay_invoice",
+     "params": {
+      "amount": 300000,
+      "currency": "USD",
+      "counterparty": "Harbor & Lane LLP"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "96bda450519e9ff9d5f5daf02c74dee0",
+    "sig": "e6db8a3fb321b3ff01d1db01e96aa1da1d54d1b1921235700811d62c58e439da6b2550c175cfc8c7883b6ecb97a24f1b046c78e9d5c3114a7bca5f5a0d3e0d0a"
+   },
+   "gate": {
+    "decision": "BLOCKED",
+    "reasons": [
+     "CUMULATIVE_LIMIT_EXCEEDED: G-1 [be9197ca]: 1020000 + 300000 > 1200000"
+    ]
+   },
+   "hash": "350cf7636937ce0778c31438de511c5d8a4af587b274e988a3b92766e153225a"
+  },
+  {
+   "seq": 11,
+   "prev": "350cf7636937ce0778c31438de511c5d8a4af587b274e988a3b92766e153225a",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "revocation",
+    "body": {
+     "id": "R-1",
+     "grant": "be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8",
+     "reason": "Engagement paused pending board review",
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "cd1f8a4734e76448d76bf06063d18d6b",
+    "sig": "4cdfb495233433fe8e0953a1ff0b753f55ca0e47826d3f06a243ad176e5bff70d794a040a14e2001b43f7b0e52ed729f0f97079df746a7fce6d93a0cb940d40f"
+   },
+   "gate": {
+    "decision": "ALLOWED",
+    "reasons": []
+   },
+   "hash": "42511a7a999993c30270fb22d56fea46ceda4201ffa685c7798818ed7e07c065"
+  },
+  {
+   "seq": 12,
+   "prev": "42511a7a999993c30270fb22d56fea46ceda4201ffa685c7798818ed7e07c065",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-10",
+     "grant": "be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8",
+     "action": "pay_invoice",
+     "params": {
+      "amount": 50000,
+      "currency": "USD",
+      "counterparty": "Harbor & Lane LLP"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "96bda450519e9ff9d5f5daf02c74dee0",
+    "sig": "f399a430c5982736ef685324443f881deae1b9fc6e6fcbf62e16530848bb9f524e3fdcd691fadd857d2d84c7683ba0725ab6daebdc6abb3f700e6f69226ec800"
+   },
+   "gate": {
+    "decision": "BLOCKED",
+    "reasons": [
+     "GRANT_REVOKED: G-1 [be9197ca] (revocation R-1 at log position 11)"
+    ]
+   },
+   "hash": "b2b389dc5342980739a7f89d0596a37503782ab8f860ae39b655b357ee29a833"
+  },
+  {
+   "seq": 13,
+   "prev": "b2b389dc5342980739a7f89d0596a37503782ab8f860ae39b655b357ee29a833",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-11",
+     "grant": "1e7dc2bcbbc1d09b20adb0b0352d85a79946f96ca2503bf9ceace27adac20bac",
+     "action": "send_notice",
+     "params": {
+      "notice": "Second reminder"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "0cd453cd7781ef06c9d1036d4e2f2d81",
+    "sig": "8bd5051e5bd32ad7867c44dcf15bd7e9c7ad2a86ae97709cdd421db7339ce0da40a980c0ab19045ec158d061deafb97fb68c596a78c609c2ef59aa683446d70b"
+   },
+   "gate": {
+    "decision": "BLOCKED",
+    "reasons": [
+     "GRANT_REVOKED: G-1 [be9197ca] (revocation R-1 at log position 11)"
+    ]
+   },
+   "hash": "1f0fcf3f6ae334e31ff4f8b8a7cb9b63dac16db253af7e43ed78f5966189a045"
+  },
+  {
+   "seq": 14,
+   "prev": "1f0fcf3f6ae334e31ff4f8b8a7cb9b63dac16db253af7e43ed78f5966189a045",
+   "recorded_at": "2026-10-27T13:47:49Z",
+   "envelope": {
+    "kind": "action",
+    "body": {
+     "id": "A-99",
+     "grant": "be9197cad65077f6d67d57d4f82b2eee5061ca292b776afa0bc1b1baee9ed2e8",
+     "action": "pay_invoice",
+     "params": {
+      "amount": 9900000,
+      "currency": "USD",
+      "counterparty": "Harbor & Lane LLP"
+     },
+     "claimed_at": "2026-10-27T13:47:49Z"
+    },
+    "signer": "96bda450519e9ff9d5f5daf02c74dee0",
+    "sig": "ced5d38356ab5a797cdb66cefbd303d94761914077e43c2c0da7fae9ef22326152994304c53e7dcbd0369beede3924b5280f50b052dff665dff36f76a7d8c804"
+   },
+   "gate": {
+    "decision": "ALLOWED",
+    "reasons": [
+     "GRANT_REVOKED: G-1 [be9197ca] (revocation R-1 at log position 11)",
+     "AMOUNT_OVER_LIMIT: G-1 [be9197ca]: 9900000 > 500000",
+     "CUMULATIVE_LIMIT_EXCEEDED: G-1 [be9197ca]: 1020000 + 9900000 > 1200000"
+    ]
+   },
+   "hash": "9341bbf58ee7a304bdccf54a9c8684156eb81c0c5fb0044778d40cd1b092f149"
+  }
+ ],
+ "anchors": []
+}
