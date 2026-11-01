@@ -2,6 +2,8 @@
 
 **Who let the AI agent do that?** Authority Trail keeps a signed record of what an AI agent was authorised to do, what it asked to do, and what the recorder refused. A lawyer or auditor can re-check that record with a separate, small program instead of taking the operator's word for it.
 
+**Demo video (2:12, added Nov 1, 2026 after submission; code unchanged since the submitted tag `submitted-2026-10-31`):** https://youtu.be/YwJ6yE5tcsQ
+
 > Prototype with fictional data. Not legal advice. Nothing here establishes that any grant is legally valid or enforceable, and the recorder is a policy check and a log: it does not move money or stop a tool. See [What this does not establish](#what-this-does-not-establish).
 
 ## The problem
