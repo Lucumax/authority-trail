@@ -8,7 +8,7 @@
 
 **What you do:** run one command on a saved log. **What you get:** a verdict and an authority memo that prints the signed wording next to the limits that were applied. In the demo, an operator's log records a $99,000 payment as `ALLOWED`; the verifier replays the signed grant and reports `ALLOWED_OUTSIDE_AUTHORITY` at entry 14 (grant revoked at entry 11, over the $5,000 per-invoice limit, over the $12,000 total).
 
-**Demo video (2:12, added Nov 1, 2026 after submission; code unchanged since the submitted tag `submitted-2026-10-31`):** https://youtu.be/YwJ6yE5tcsQ
+**Demo video (2:06, v4, Nov 2, 2026; code unchanged since the submitted tag `submitted-2026-10-31`):** https://youtu.be/L-_gs5oQLsQ (earlier cut, Nov 1: https://youtu.be/YwJ6yE5tcsQ)
 
 > Prototype with fictional data. Not legal advice. Nothing here establishes that any grant is legally valid or enforceable, and the recorder is a policy check and a log: it does not move money or stop a tool. See [What this does not establish](#what-this-does-not-establish).
 
