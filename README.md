@@ -1,10 +1,33 @@
 # Authority Trail
 
-**Who let the AI agent do that?** Authority Trail keeps a signed record of what an AI agent was authorised to do, what it asked to do, and what the recorder refused. A lawyer or auditor can re-check that record with a separate, small program instead of taking the operator's word for it.
+**Check an AI agent's recorded authority without trusting its operator's verdict.**
+
+![Demo: an operator's log marks a $99,000 payment ALLOWED; the separate verifier reports it outside authority (revoked grant, over the per-invoice limit, over the total)](docs/img/authority_trail_verdict.gif)
+
+**Who it is for:** a lawyer, auditor or compliance reviewer who is asked "was this AI agent allowed to do that?" when the only record is the operator's own log.
+
+**What you do:** run one command on a saved log. **What you get:** a verdict and an authority memo that prints the signed wording next to the limits that were applied. In the demo, an operator's log records a $99,000 payment as `ALLOWED`; the verifier replays the signed grant and reports `ALLOWED_OUTSIDE_AUTHORITY` at entry 14 (grant revoked at entry 11, over the $5,000 per-invoice limit, over the $12,000 total).
 
 **Demo video (2:12, added Nov 1, 2026 after submission; code unchanged since the submitted tag `submitted-2026-10-31`):** https://youtu.be/YwJ6yE5tcsQ
 
 > Prototype with fictional data. Not legal advice. Nothing here establishes that any grant is legally valid or enforceable, and the recorder is a policy check and a log: it does not move money or stop a tool. See [What this does not establish](#what-this-does-not-establish).
+
+### Try it in 60 seconds
+
+Python 3.11, standard library only. Run from the repository root.
+
+```sh
+python -m authority_trail verify examples/sample/trail_rogue_operator.json
+#   RESULT: AUTHORITY_FINDINGS
+#     entries 15; hash chain intact
+#     [HIGH] ALLOWED_OUTSIDE_AUTHORITY at entry 14: ...
+python -m authority_trail verify examples/sample/trail.json
+#   RESULT: CLEAN
+python -m authority_trail memo examples/sample/trail_rogue_operator.json
+#   the authority memo for the rogue-operator log
+```
+
+`trail_rogue_operator.json` is a constructed sample, not a real incident. `verify` exits with status 3 when it reports findings. The full tour (demo log, tampering, browser checker) is under [Try it (about a minute)](#try-it-about-a-minute) below.
 
 ## The problem
 
